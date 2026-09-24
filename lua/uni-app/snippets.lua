@@ -6,7 +6,75 @@ function M.setup()
 	if not ok then
 		return
 	end
+
 	local s, t, i, c = ls.snippet, ls.text_node, ls.insert_node, ls.choice_node
+	local function expand_or_jump()
+		if ls.expand_or_locally_jumpable() then
+			ls.expand_or_jump()
+			return
+		end
+
+		if
+			type(vim.snippet) == "table"
+			and type(vim.snippet.active) == "function"
+			and vim.snippet.active({ direction = 1 })
+		then
+			vim.snippet.jump(1)
+			return
+		end
+
+		local blink_ok, blink = pcall(require, "blink.cmp")
+		if
+			blink_ok
+			and type(blink.is_visible) == "function"
+			and type(blink.select_next) == "function"
+			and blink.is_visible()
+		then
+			blink.select_next()
+			return
+		end
+
+		local cmp_ok, cmp = pcall(require, "cmp")
+		if
+			cmp_ok
+			and type(cmp.visible) == "function"
+			and type(cmp.select_next_item) == "function"
+			and cmp.visible()
+		then
+			cmp.select_next_item()
+			return
+		end
+
+		return "<Tab>"
+	end
+
+	local function setup_tab_mapping(bufnr)
+		if not vim.api.nvim_buf_is_valid(bufnr) or vim.bo[bufnr].filetype ~= "vue" then
+			return
+		end
+		vim.keymap.set({ "i", "s" }, "<Tab>", expand_or_jump, {
+			buffer = bufnr,
+			desc = "Expand uni-app LuaSnip snippets",
+			expr = true,
+			silent = true,
+		})
+	end
+
+	local group = vim.api.nvim_create_augroup("UniAppSnippets", { clear = true })
+	vim.api.nvim_create_autocmd({ "FileType", "InsertEnter" }, {
+		pattern = "*",
+		group = group,
+		callback = function(args)
+			vim.schedule(function()
+				setup_tab_mapping(args.buf)
+			end)
+		end,
+	})
+
+	if vim.bo.filetype == "vue" then
+		setup_tab_mapping(0)
+	end
+
 	-- These templates target Vue single-file components used by uni-app.
 	ls.add_snippets("vue", {
 		s("upage", {
