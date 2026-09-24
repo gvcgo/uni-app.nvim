@@ -8,6 +8,12 @@ function M.setup()
 	end
 
 	local s, t, i, c = ls.snippet, ls.text_node, ls.insert_node, ls.choice_node
+	local tab_key = vim.api.nvim_replace_termcodes("<Tab>", true, false, true)
+
+	local function fallback_tab()
+		vim.api.nvim_feedkeys(tab_key, "n", false)
+	end
+
 	local function expand_or_jump()
 		if ls.expand_or_locally_jumpable() then
 			ls.expand_or_jump()
@@ -45,7 +51,7 @@ function M.setup()
 			return
 		end
 
-		return "<Tab>"
+		fallback_tab()
 	end
 
 	local function setup_tab_mapping(bufnr)
@@ -55,7 +61,6 @@ function M.setup()
 		vim.keymap.set({ "i", "s" }, "<Tab>", expand_or_jump, {
 			buffer = bufnr,
 			desc = "Expand uni-app LuaSnip snippets",
-			expr = true,
 			silent = true,
 		})
 	end
